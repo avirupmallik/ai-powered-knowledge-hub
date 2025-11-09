@@ -1,0 +1,19 @@
+# Explicit schema root so GraphQL has the required query operation
+schema {
+    query: Query
+}
+
+type Query {
+    _dummy: String
+    askQuestion(input : AskQuestionInput ): Answer!
+}
+
+input AskQuestionInput {
+    question : String!
+    topK : Int
+    systemPrompt : String
+}
+
+type Answer {
+   answer : String!
+}

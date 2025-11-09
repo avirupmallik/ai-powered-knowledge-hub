@@ -1,0 +1,26 @@
+# fly.toml for Fly.io v2
+app = "ai-powered-knowledge-hub-api"
+primary_region = "ord"
+
+[build]
+
+[env]
+  JAVA_OPTS = "-Xms256m -Xmx512m"
+  JAVA_TOOL_OPTIONS = "-XX:+ExitOnOutOfMemoryError -Xms256m -Xmx512m"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"
