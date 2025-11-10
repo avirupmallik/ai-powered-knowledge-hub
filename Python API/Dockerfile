@@ -15,6 +15,9 @@ RUN pip install --upgrade pip
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Download NLTK data required by unstructured
+RUN python -c "import nltk; nltk.download('punkt_tab'); nltk.download('averaged_perceptron_tagger_eng')"
+
 # Copy application code
 COPY . .
 

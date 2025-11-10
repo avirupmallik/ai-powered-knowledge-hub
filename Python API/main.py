@@ -234,12 +234,11 @@ async def upload_document(
         logger.info(f"Analyzing document: {file.filename}")
         analysis = generator.analyze_document(sample_text, max_text_length=5000)
         
-        # Add to vector store in background (will skip if duplicate)
-        background_tasks.add_task(vector_store.add_documents, chunks)
-        
+        # Add to vector store in background only if not a duplicate
         if is_duplicate:
             logger.info(f"Document {file.filename} already exists, skipping vector insertion")
         else:
+            background_tasks.add_task(vector_store.add_documents, chunks)
             logger.info(f"Queued {len(chunks)} chunks for background processing from {file.filename}")
         
         return UploadResponse(
