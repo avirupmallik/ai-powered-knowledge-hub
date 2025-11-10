@@ -1,6 +1,6 @@
-"""Document ingestion module."""
+"""Document ingestion module with LangChain."""
 
-from .document_processor import DocumentProcessor
-from .vector_store import VectorStore
+from .langchain_processor import LangChainDocumentProcessor
+from .langchain_vector_store import LangChainVectorStore
 
-__all__ = ["DocumentProcessor", "VectorStore"]
+__all__ = ["LangChainDocumentProcessor", "LangChainVectorStore"]

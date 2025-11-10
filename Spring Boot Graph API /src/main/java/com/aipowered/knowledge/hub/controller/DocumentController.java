@@ -20,8 +20,12 @@ import java.io.IOException;
 @CrossOrigin(origins = "*")
 public class DocumentController {
 
+//    private final WebClient webClient = WebClient.builder()
+//            .baseUrl("https://ai-research-knowledge-hub.fly.dev")
+//            .build();
+
     private final WebClient webClient = WebClient.builder()
-            .baseUrl("https://ai-research-knowledge-hub.fly.dev")
+            .baseUrl("http://localhost:8000")
             .build();
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

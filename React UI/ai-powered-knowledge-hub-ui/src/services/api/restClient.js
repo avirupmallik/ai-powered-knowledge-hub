@@ -122,16 +122,32 @@ class RestClient {
       });
 
       // Handle errors
-      xhr.addEventListener('error', () => {
-        reject(new Error('Network error'));
+      xhr.addEventListener('error', (e) => {
+        console.error('XHR Error:', e);
+        console.error('Backend URL:', `${this.baseURL}${API_CONFIG.services.upload.endpoint}`);
+        reject(new Error(`Network error: Cannot connect to ${this.baseURL}. Please check if the backend is running and CORS is configured.`));
       });
 
       xhr.addEventListener('abort', () => {
         reject(new Error('Upload cancelled'));
       });
 
+      xhr.addEventListener('timeout', () => {
+        reject(new Error('Upload timeout: Request took too long to complete'));
+      });
+
       // Send request
-      xhr.open('POST', `${this.baseURL}${API_CONFIG.services.upload.endpoint}`);
+      const uploadUrl = `${this.baseURL}${API_CONFIG.services.upload.endpoint}`;
+      console.log('Uploading to:', uploadUrl);
+      
+      xhr.open('POST', uploadUrl);
+      
+      // Set timeout
+      xhr.timeout = this.timeout;
+      
+      // Add headers for CORS
+      xhr.withCredentials = false; // Set to true if your backend requires credentials
+      
       xhr.send(formData);
     });
   }

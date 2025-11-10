@@ -1,24 +1,24 @@
 """
-Retrieval module for finding relevant documents.
+Retrieval module for finding relevant documents using LangChain.
 """
 
 from typing import List, Dict, Any, Optional
 from loguru import logger
-from src.ingestion.vector_store import VectorStore
+from src.ingestion.langchain_vector_store import LangChainVectorStore
 
 
 class Retriever:
-    """Handles document retrieval from vector store."""
+    """Handles document retrieval from LangChain vector store."""
     
-    def __init__(self, vector_store: VectorStore):
+    def __init__(self, vector_store: LangChainVectorStore):
         """
-        Initialize retriever with vector store.
+        Initialize retriever with LangChain vector store.
         
         Args:
-            vector_store: VectorStore instance
+            vector_store: LangChainVectorStore instance
         """
         self.vector_store = vector_store
-        logger.info("Retriever initialized")
+        logger.info("Retriever initialized with LangChain vector store")
     
     def retrieve(
         self,
@@ -27,23 +27,21 @@ class Retriever:
         filter_metadata: Optional[Dict[str, Any]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Retrieve relevant documents for a query.
+        Retrieve relevant documents for a query using LangChain.
         
         Args:
             query: Search query
             top_k: Number of documents to retrieve
-            filter_metadata: Optional metadata filters
+            filter_metadata: Optional metadata filters (not used yet)
             
         Returns:
             List of relevant documents with metadata and scores
         """
         logger.info(f"Retrieving documents for query: '{query[:100]}...'")
         
-        results = self.vector_store.query(
-            query_text=query,
-            top_k=top_k,
-            filter_metadata=filter_metadata
-        )
+        # Use LangChain's search with scores
+        k = top_k if top_k else 5
+        results = self.vector_store.search_with_scores(query=query, k=k)
         
         return results
     

@@ -13,8 +13,8 @@ import shutil
 from loguru import logger
 
 from config.settings import settings
-from src.ingestion.document_processor import DocumentProcessor
-from src.ingestion.vector_store import VectorStore
+from src.ingestion.langchain_processor import LangChainDocumentProcessor
+from src.ingestion.langchain_vector_store import LangChainVectorStore
 from src.retrieval.retriever import Retriever
 from src.generation.openai_generator import OpenAIGenerator
 from src.rag_pipeline import RAGPipeline
@@ -23,8 +23,8 @@ from src.rag_pipeline import RAGPipeline
 # Initialize FastAPI app
 app = FastAPI(
     title="AI Research Knowledge Hub",
-    description="RAG-enabled AI pipeline with OpenAI GPT and Qdrant",
-    version="1.0.0"
+    description="RAG-enabled AI pipeline with OpenAI GPT, LangChain, and Qdrant",
+    version="2.0.0"
 )
 
 # Add CORS middleware
@@ -36,12 +36,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize components
-vector_store = VectorStore()
+# Initialize LangChain components
+vector_store = LangChainVectorStore()
 retriever = Retriever(vector_store)
 generator = OpenAIGenerator()
 rag_pipeline = RAGPipeline(retriever, generator)
-document_processor = DocumentProcessor(
+document_processor = LangChainDocumentProcessor(
     chunk_size=settings.chunk_size,
     chunk_overlap=settings.chunk_overlap
 )
@@ -108,11 +108,13 @@ async def root():
 async def health_check():
     """Health check endpoint."""
     try:
-        stats = vector_store.get_collection_stats()
+        # Get collection info from Qdrant client
+        collection_info = vector_store.client.get_collection(vector_store.collection_name)
         return {
             "status": "healthy",
             "vector_store": "connected",
-            "documents": stats["total_documents"]
+            "collection": vector_store.collection_name,
+            "documents": collection_info.points_count if collection_info else 0
         }
     except Exception as e:
         logger.error(f"Health check failed: {str(e)}")
@@ -221,7 +223,7 @@ async def upload_document(
         doc_id = chunks[0]["metadata"]["doc_id"] if chunks else None
         is_duplicate = False
         
-        if doc_id and vector_store._check_document_exists(doc_id):
+        if doc_id and vector_store.check_document_exists(doc_id):
             is_duplicate = True
             logger.info(f"Duplicate document detected: {file.filename} (doc_id: {doc_id})")
         
@@ -259,7 +261,12 @@ async def upload_document(
 async def get_stats():
     """Get statistics about the knowledge base."""
     try:
-        stats = vector_store.get_collection_stats()
+        collection_info = vector_store.client.get_collection(vector_store.collection_name)
+        stats = {
+            "total_documents": collection_info.points_count,
+            "total_chunks": collection_info.points_count,
+            "collection_name": vector_store.collection_name
+        }
         return StatsResponse(**stats)
     
     except Exception as e:

@@ -1,21 +1,31 @@
 """
-Generation module using OpenAI GPT models for RAG responses.
+Generation module using OpenAI GPT models via LangChain for RAG responses.
 """
 
+import os
 from typing import Dict, Any, Optional
-from openai import OpenAI
+from langchain_community.chat_models import ChatOpenAI
+from langchain.schema import HumanMessage, SystemMessage
 from loguru import logger
 from config.settings import settings
 
 
 class OpenAIGenerator:
-    """Generates responses using OpenAI GPT models with RAG context."""
+    """Generates responses using OpenAI GPT models with RAG context via LangChain."""
     
     def __init__(self):
-        """Initialize OpenAI API client."""
-        logger.info("Initializing OpenAI generator")
-        self.client = OpenAI(api_key=settings.openai_api_key)
-        self.model = settings.openai_model
+        """Initialize OpenAI API client via LangChain."""
+        logger.info("Initializing OpenAI generator with LangChain")
+        os.environ["OPENAI_API_KEY"] = settings.openai_api_key
+
+        # Create LangChain ChatOpenAI client
+        self.client = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0.5,
+            max_tokens=1000,
+            request_timeout=20.0
+        )
+        self.model = "gpt-4o-mini"
         logger.info(f"Using model: {self.model}")
     
     def generate(
@@ -62,33 +72,24 @@ class OpenAIGenerator:
         logger.info(f"Generating response for query: '{query[:100]}...'")
         
         try:
-            # Use gpt-4o-mini for faster responses (10x faster than gpt-4-turbo)
-            model = "gpt-4o-mini"
+            # Use LangChain ChatOpenAI
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_message)
+            ]
             
-            # Call OpenAI API with timeout
-            response = self.client.chat.completions.create(
-                model=model,  # Fast model
-                max_tokens=max_tokens,
-                temperature=temperature,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message}
-                ],
-                timeout=20.0  # 20 second timeout
-            )
-            
-            # Extract response text
-            response_text = response.choices[0].message.content
+            response = self.client.invoke(messages)
+            response_text = response.content
             
             logger.info("Response generated successfully")
             
             return {
                 "answer": response_text,
-                "model": model,  # Return actual model used
+                "model": self.model,
                 "usage": {
-                    "prompt_tokens": response.usage.prompt_tokens,
-                    "completion_tokens": response.usage.completion_tokens,
-                    "total_tokens": response.usage.total_tokens
+                    "prompt_tokens": 0,  # LangChain doesn't expose this directly
+                    "completion_tokens": 0,
+                    "total_tokens": 0
                 }
             }
         
@@ -155,20 +156,14 @@ Please provide a comprehensive answer based on the context above. If the context
         logger.info(f"Generating streaming response for query: '{query[:100]}...'")
         
         try:
-            stream = self.client.chat.completions.create(
-                model=self.model,
-                max_tokens=max_tokens,
-                temperature=temperature,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message}
-                ],
-                stream=True
-            )
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_message)
+            ]
             
-            for chunk in stream:
-                if chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+            for chunk in self.client.stream(messages):
+                if chunk.content:
+                    yield chunk.content
         
         except Exception as e:
             logger.error(f"Error in streaming response: {str(e)}")
@@ -209,20 +204,23 @@ Return ONLY valid JSON:
         logger.info("Analyzing document for summary, key terms, and Q&A")
         
         try:
-            # Use fastest GPT-4o-mini model with aggressive limits
-            response = self.client.chat.completions.create(
+            # Create a temporary client for JSON mode
+            json_client = ChatOpenAI(
                 model="gpt-4o-mini",
-                max_tokens=800,  # Reduced from 1500 for speed
-                temperature=0.2,  # Even lower for faster, more deterministic output
-                response_format={"type": "json_object"},
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_message}
-                ]
+                temperature=0.2,
+                max_tokens=800,
+                model_kwargs={"response_format": {"type": "json_object"}}
             )
             
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=user_message)
+            ]
+            
+            response = json_client.invoke(messages)
+            
             import json
-            analysis = json.loads(response.choices[0].message.content)
+            analysis = json.loads(response.content)
             
             logger.info("Document analysis completed successfully")
             

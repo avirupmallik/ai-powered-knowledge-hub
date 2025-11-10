@@ -23,8 +23,12 @@ import java.io.IOException;
 @CrossOrigin(origins = "*")
 public class DocumentMutationResolver {
 
+//    private final WebClient webClient = WebClient.builder()
+//            .baseUrl("https://ai-research-knowledge-hub.fly.dev")
+//            .build();
+
     private final WebClient webClient = WebClient.builder()
-            .baseUrl("https://ai-research-knowledge-hub.fly.dev")
+            .baseUrl("http://localhost:8000")
             .build();
 
     @QueryMapping
